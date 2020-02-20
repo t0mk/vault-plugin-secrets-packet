@@ -25,7 +25,7 @@ func (b *backend) pathConfig() *framework.Path {
 	}
 }
 
-type credConfig struct {
+type packetStorageEngineConfig struct {
 	APIToken string `json:"api_token"`
 }
 
@@ -36,9 +36,10 @@ func (b *backend) operationConfigUpdate(ctx context.Context, req *logical.Reques
 	} else {
 		return nil, errors.New("api_token is required")
 	}
-	entry, err := logical.StorageEntryJSON("config", credConfig{
-		APIToken: apiToken,
-	})
+	entry, err := logical.StorageEntryJSON("config",
+		packetStorageEngineConfig{
+			APIToken: apiToken,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -47,21 +48,6 @@ func (b *backend) operationConfigUpdate(ctx context.Context, req *logical.Reques
 	}
 	b.resetClient(ctx)
 	return nil, nil
-}
-
-func readCredentials(ctx context.Context, storage logical.Storage) (*credConfig, error) {
-	entry, err := storage.Get(ctx, "config")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-	creds := &credConfig{}
-	if err := entry.DecodeJSON(creds); err != nil {
-		return nil, err
-	}
-	return creds, nil
 }
 
 const pathConfigRootHelpSyn = `Configure the API token which Vault will use to create temporary tokens.`
