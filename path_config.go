@@ -25,7 +25,7 @@ func (b *backend) pathConfig() *framework.Path {
 	}
 }
 
-type packetStorageEngineConfig struct {
+type packetSecretsEngineConfig struct {
 	APIToken string `json:"api_token"`
 }
 
@@ -37,7 +37,7 @@ func (b *backend) operationConfigUpdate(ctx context.Context, req *logical.Reques
 		return nil, errors.New("api_token is required")
 	}
 	entry, err := logical.StorageEntryJSON("config",
-		packetStorageEngineConfig{
+		packetSecretsEngineConfig{
 			APIToken: apiToken,
 		})
 	if err != nil {

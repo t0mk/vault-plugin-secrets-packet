@@ -3,6 +3,7 @@ package packethost
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -26,10 +27,6 @@ func (b *backend) pathSecrets() *framework.Secret {
 	}
 }
 
-func (b *backend) operationRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return nil, nil
-}
-
 func (b *backend) operationRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	idRaw, ok := req.Secret.InternalData["api_key_id"]
 	if !ok {
@@ -46,4 +43,23 @@ func (b *backend) operationRevoke(ctx context.Context, req *logical.Request, d *
 	}
 
 	return nil, nil
+}
+
+func (b *backend) operationRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	defaultLease, maxLease := b.getDefaultAndMaxLease()
+	resp := &logical.Response{Secret: req.Secret}
+	resp.Secret.TTL = defaultLease
+	resp.Secret.MaxTTL = maxLease
+	return resp, nil
+}
+
+func (b *backend) getDefaultAndMaxLease() (time.Duration, time.Duration) {
+	maxLease := b.system.MaxLeaseTTL()
+	defaultLease := b.system.DefaultLeaseTTL()
+
+	if defaultLease > maxLease {
+		maxLease = defaultLease
+	}
+	return defaultLease, maxLease
+
 }

@@ -3,6 +3,7 @@ package packethost
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -36,6 +37,7 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 	if role == nil {
+		log.Println("Role", roleName, "doesn't exist")
 		// Attempting to read a role that doesn't exist.
 		return nil, nil
 	}

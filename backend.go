@@ -73,10 +73,10 @@ func (b *backend) Client(ctx context.Context, s logical.Storage) (*packngo.Clien
 		return nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("configure the config first")
+		return nil, fmt.Errorf("setup the config first")
 	}
 
-	var conf credConfig
+	var conf packetSecretsEngineConfig
 	if err := entry.DecodeJSON(&conf); err != nil {
 		return nil, err
 	}
