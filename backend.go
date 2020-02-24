@@ -1,4 +1,4 @@
-package packethost
+package packet
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/packethost/packngo"
 )
 
-const secretType = "packethost"
+const secretType = "packet"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := NewBackend(conf.System)

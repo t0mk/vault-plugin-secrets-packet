@@ -1,4 +1,4 @@
-package packethost
+package packet
 
 import (
 	"context"
@@ -47,6 +47,7 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 		ReadOnly:    role.ReadOnly,
 		ProjectID:   role.ProjectID,
 	}
+
 	client, err := b.Client(ctx, req.Storage)
 	if err != nil {
 		return nil, err

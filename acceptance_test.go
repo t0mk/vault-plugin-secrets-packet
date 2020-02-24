@@ -1,4 +1,4 @@
-package packethost
+package packet
 
 import (
 	"fmt"

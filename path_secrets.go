@@ -1,4 +1,4 @@
-package packethost
+package packet
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 func (b *backend) pathSecrets() *framework.Secret {
 	return &framework.Secret{
-		Type: "packethost",
+		Type: secretType,
 		Fields: map[string]*framework.FieldSchema{
 			"api_key_token": {
 				Type:        framework.TypeString,
