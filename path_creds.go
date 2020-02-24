@@ -57,10 +57,9 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 	}
 
 	resp := b.Secret(secretType).Response(map[string]interface{}{
-		"api_key": apiKey.Token,
+		"api_key_token": apiKey.Token,
 	}, map[string]interface{}{
-		"role_type": role.Type,
-		"role_name": roleName,
+		"api_key_id": apiKey.ID,
 	})
 	if role.TTL != 0 {
 		resp.Secret.TTL = role.TTL

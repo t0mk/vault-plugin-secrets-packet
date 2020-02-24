@@ -1,113 +1,98 @@
 package packethost
 
 import (
-	"context"
-	"log"
+	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/packethost/packngo"
 )
 
 const (
-	envVarRunAccTests = "VAULT_PACKET_TEST_API"
-	envVarAPIToken    = "PACKET_AUTH_TOKEN"
+	envVarRunAccTests = "VAULT_PACKET_ACCEPTANCE_TEST_API"
 )
 
 var runAcceptanceTests = os.Getenv(envVarRunAccTests) == "1"
 
-type testEnv struct {
-	APIToken string
-
-	Backend logical.Backend
-	Context context.Context
-	Storage logical.Storage
-
-	MostRecentSecret *logical.Secret
+func (e *testEnv) CreatePacketProject(t *testing.T) {
+	pcr := packngo.ProjectCreateRequest{Name: "Vault-testing-project"}
+	c := packngo.NewClientWithAuth("Hashicorp Vault Test", e.APIToken, nil)
+	p, _, err := c.Projects.Create(&pcr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.TestProjectID = p.ID
 }
 
-func TestCreds(t *testing.T) {
+func (e *testEnv) RemovePacketProject(t *testing.T) {
+	c := packngo.NewClientWithAuth("Hashicorp Vault Test", e.APIToken, nil)
+	_, err := c.Projects.Delete(e.TestProjectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUserCreds(t *testing.T) {
 	if !runAcceptanceTests {
 		t.SkipNow()
 	}
 
-	acceptanceTestEnv, err := newAcceptanceTestEnv()
+	acceptanceTestEnv, err := newAcceptanceTestEnv("testuserrole")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Run("add config", acceptanceTestEnv.AddConfig)
+
 	t.Run("add user role", acceptanceTestEnv.AddUserRole)
-	t.Run("read user role", acceptanceTestEnv.ReadUserRole)
+	t.Run("read user role", acceptanceTestEnv.ReadRole)
 	t.Run("read user creds", acceptanceTestEnv.ReadUserCreds)
+
+	t.Run("renew user creds", acceptanceTestEnv.RenewCreds)
+	t.Run("revoke user creds", acceptanceTestEnv.RevokeCreds)
 }
 
-func newAcceptanceTestEnv() (*testEnv, error) {
-	ctx := context.Background()
-	conf := &logical.BackendConfig{
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour,
-			MaxLeaseTTLVal:     time.Hour,
-		},
+func TestProjectCreds(t *testing.T) {
+	if !runAcceptanceTests {
+		t.SkipNow()
 	}
-	b, err := Factory(ctx, conf)
+
+	acceptanceTestEnv, err := newAcceptanceTestEnv("testprojectrole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("add config", acceptanceTestEnv.AddConfig)
+
+	t.Run("create testing project", acceptanceTestEnv.CreatePacketProject)
+	t.Run("add project role", acceptanceTestEnv.AddProjectRole)
+	t.Run("read project role", acceptanceTestEnv.ReadRole)
+	t.Run("read project creds", acceptanceTestEnv.ReadProjectCreds)
+
+	t.Run("renew project creds", acceptanceTestEnv.RenewCreds)
+	t.Run("revoke project creds", acceptanceTestEnv.RevokeCreds)
+	t.Run("remove testing project", acceptanceTestEnv.RemovePacketProject)
+}
+
+func GetPacketProjectAPIKey(projectID, keyID string) (*packngo.APIKey, error) {
+	c, err := packngo.NewClient()
 	if err != nil {
 		return nil, err
 	}
-	return &testEnv{
-		APIToken: os.Getenv(envVarAPIToken),
-		Backend:  b,
-		Context:  ctx,
-		Storage:  &logical.InmemStorage{},
-	}, nil
+	return c.APIKeys.ProjectGet(projectID, keyID, nil)
 }
 
-func (e *testEnv) AddConfig(t *testing.T) {
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Storage:   e.Storage,
-		Data: map[string]interface{}{
-			"api_token": e.APIToken,
-		},
+func (e *testEnv) AddProjectRole(t *testing.T) {
+	if e.TestProjectID == "" {
+		t.Fatal("You must create a testing project before testing project role")
 	}
-	resp, err := e.Backend.HandleRequest(e.Context, req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
-	}
-	if resp != nil {
-		t.Fatal("expected nil response to represent a 204")
-	}
-}
-
-func (e *testEnv) ReadFirstConfig(t *testing.T) {
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "config",
-		Storage:   e.Storage,
-	}
-	resp, err := e.Backend.HandleRequest(e.Context, req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
-	}
-	if resp == nil {
-		t.Fatal("expected a response")
-	}
-	if resp.Data["api_token"] != e.APIToken {
-		t.Fatal("expected api_token of " + e.APIToken)
-	}
-}
-
-func (e *testEnv) AddUserRole(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "role/testuserrole",
+		Path:      fmt.Sprintf("role/%s", e.RoleName),
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"name":       "testrole",
-			"type":       "user",
+			"type":       "project",
+			"project_id": e.TestProjectID,
 			"read_only":  true,
-			"project_id": "",
 			"ttl":        20,
 			"max_ttl":    60,
 		},
@@ -121,10 +106,10 @@ func (e *testEnv) AddUserRole(t *testing.T) {
 	}
 }
 
-func (e *testEnv) ReadUserRole(t *testing.T) {
+func (e *testEnv) ReadProjectCreds(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "role/testuserrole",
+		Path:      fmt.Sprintf("creds/%s", e.RoleName),
 		Storage:   e.Storage,
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -134,12 +119,66 @@ func (e *testEnv) ReadUserRole(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected a response")
 	}
+
+	if resp.Data["api_key_token"] == "" {
+		t.Fatal("failed to receive api_key_token")
+	}
+	if resp.Secret.InternalData["api_key_id"] == "" {
+		t.Fatal("failed to receive api_key_id")
+	}
+	keyID := resp.Secret.InternalData["api_key_id"].(string)
+
+	apiKey, err := GetPacketProjectAPIKey(e.TestProjectID, keyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !apiKey.ReadOnly {
+		t.Fatal("Created API key should be read-only")
+	}
+	expectedDesc := fmt.Sprintf("Vault-%s", e.RoleName)
+	if apiKey.Description != expectedDesc {
+		t.Fatal("Created API key should be read-only")
+	}
+	if apiKey.Token != resp.Data["api_key_token"] {
+		t.Fatal("mismatch in api tokens")
+	}
+
+	e.MostRecentSecret = resp.Secret
+}
+
+func (e *testEnv) AddUserRole(t *testing.T) {
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      fmt.Sprintf("role/%s", e.RoleName),
+		Storage:   e.Storage,
+		Data: map[string]interface{}{
+			"type":      "user",
+			"read_only": true,
+			"ttl":       20,
+			"max_ttl":   60,
+		},
+	}
+	resp, err := e.Backend.HandleRequest(e.Context, req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	}
+	if resp != nil {
+		t.Fatal("expected nil response to represent a 204")
+	}
+}
+
+func GetPacketUserAPIKey(id string) (*packngo.APIKey, error) {
+	c, err := packngo.NewClient()
+	if err != nil {
+		return nil, err
+	}
+	return c.APIKeys.UserGet(id, nil)
 }
 
 func (e *testEnv) ReadUserCreds(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/testuserrole",
+		Path:      fmt.Sprintf("creds/%s", e.RoleName),
 		Storage:   e.Storage,
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -149,10 +188,29 @@ func (e *testEnv) ReadUserCreds(t *testing.T) {
 	if resp == nil {
 		t.Fatal("expected a response")
 	}
-	log.Printf("%#v", resp)
 
-	if resp.Data["api_key"] == "" {
-		t.Fatal("failed to receive api_key")
+	if resp.Data["api_key_token"] == "" {
+		t.Fatal("failed to receive api_key_token")
 	}
-	//e.MostRecentSecret = resp.Secret
+	if resp.Secret.InternalData["api_key_id"] == "" {
+		t.Fatal("failed to receive api_key_id")
+	}
+	keyID := resp.Secret.InternalData["api_key_id"].(string)
+
+	apiKey, err := GetPacketUserAPIKey(keyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !apiKey.ReadOnly {
+		t.Fatal("Created API key should be read-only")
+	}
+	expectedDesc := fmt.Sprintf("Vault-%s", e.RoleName)
+	if apiKey.Description != expectedDesc {
+		t.Fatal("Created API key should be read-only")
+	}
+	if apiKey.Token != resp.Data["api_key_token"] {
+		t.Fatal("mismatch in api tokens")
+	}
+
+	e.MostRecentSecret = resp.Secret
 }

@@ -13,13 +13,9 @@ func (b *backend) pathSecrets() *framework.Secret {
 	return &framework.Secret{
 		Type: "packethost",
 		Fields: map[string]*framework.FieldSchema{
-			"api_token": {
+			"api_key_token": {
 				Type:        framework.TypeString,
 				Description: "API token",
-			},
-			"api_key_id": {
-				Type:        framework.TypeString,
-				Description: "ID of API Token Resource",
 			},
 		},
 		Renew:  b.operationRenew,

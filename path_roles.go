@@ -69,10 +69,12 @@ func (b *backend) pathRole() *framework.Path {
 			"type": {
 				Type:        framework.TypeString,
 				Description: fmt.Sprintf("%s or %s", TypeUser, TypeProject),
+				Required:    true,
 			},
 			"read_only": {
 				Type:        framework.TypeBool,
 				Description: "should API tokens be read only",
+				Default:     true,
 			},
 			"project_id": {
 				Type:        framework.TypeString,
