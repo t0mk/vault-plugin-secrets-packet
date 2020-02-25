@@ -34,7 +34,11 @@ plugin_directory = "/home/tomk/vault-plugin-secrets-packet/bin"
 vault server -dev -config=./config.hcl
 ```
 
-Vault API in the dev mode listens on `127.0.0.1:8200` by default, you should do `export VAULT_ADDR='http://127.0.0.1:8200'` before any of the other vault commands.
+Vault API in the dev mode listens on `127.0.0.1:8200` by default, you should do 
+```
+export VAULT_ADDR='http://127.0.0.1:8200'
+```
+.. before any of the other vault commands.
 
 
 ## Usage
