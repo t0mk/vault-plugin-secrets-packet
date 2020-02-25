@@ -17,4 +17,4 @@
 # Ignore build files placed in the pkg directory
 pkg
 bin
-cmd
+cmd/vault-plugin-secrets-packet/vault-plugin-secrets-packet
