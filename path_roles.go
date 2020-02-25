@@ -220,6 +220,6 @@ const pathRolesHelpDesc = `
 This path allows to read and write roles that are used to create API tokens.
 
 To obtain an API token after the role is created, if the backend is mounted
-at "packethost" and you create a role at "packethost/roles/deploy",
+at "packethost" and you create a role at "packethost/role/deploy",
 then a user could request access credentials at "alicloud/packethost/deploy".
 `
