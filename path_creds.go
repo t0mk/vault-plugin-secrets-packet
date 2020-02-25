@@ -54,9 +54,9 @@ func (b *backend) operationCredsRead(ctx context.Context, req *logical.Request, 
 	}
 	apiKey, _, err := client.APIKeys.Create(&tokenCreateRequest)
 	if err != nil {
-		return nil, err
-	}
+		return logical.ErrorResponse(fmt.Sprintf("err '%s' when attempting to create API key in Packet", err)), nil
 
+	}
 	resp := b.Secret(secretType).Response(map[string]interface{}{
 		"api_key_token": apiKey.Token,
 	}, map[string]interface{}{
