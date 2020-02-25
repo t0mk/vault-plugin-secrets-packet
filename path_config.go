@@ -3,6 +3,7 @@ package packet
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -32,7 +33,7 @@ type packetSecretsEngineConfig struct {
 func (b *backend) operationConfigUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	apiToken := ""
 	if apiTokenIfc, ok := data.GetOk("api_token"); ok {
-		apiToken = apiTokenIfc.(string)
+		apiToken = strings.TrimSpace(apiTokenIfc.(string))
 	} else {
 		return nil, errors.New("api_token is required")
 	}
