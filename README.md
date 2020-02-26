@@ -1,3 +1,6 @@
+# This repo is archived in favor of https://github.com/packethost/vault-plugin-secrets-packet
+
+
 # Vault Secrets Engine plugin for Packet (https://packet.com)
 
 This is a [custom Vault secrets engine plugin](https://www.vaultproject.io/docs/plugin/). When installed in Vault, it allows to create temporary API keys in the Packet API. Vault then manages creation and removal of requested credentials.
